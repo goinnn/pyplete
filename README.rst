@@ -35,7 +35,7 @@ Get the top level importable package and modules:
     In [1]: from pyplete import PyPlete
     In [2]: pyplete = PyPlete()
     In [3]: importables = []
-    In [4]: autocompletes = get_pyplete.get_importables_top_level(importables)
+    In [4]: autocompletes = pyplete.get_importables_top_level(importables)
     In [5]: autocompletes
     Out[5]: True
     In [6]: importables
