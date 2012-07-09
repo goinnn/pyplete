@@ -31,7 +31,9 @@ Usage (examples)
 
 
 Get the top level importable package and modules:
+
 ::
+
     In [1]: from pyplete import PyPlete
     In [2]: pyplete = PyPlete()
     In [3]: importables = []
@@ -53,7 +55,9 @@ Get the top level importable package and modules:
      ...]
 
 Get the importable subpackages:
-:: 
+
+::
+
     In [7]: importables = []
     In [8]: autocompletes = pyplete.get_importables_rest_level(importables, "django", into_module=False)
     In [9]: autocompletes
@@ -82,7 +86,9 @@ Get the importable subpackages:
 
 
 Get the importable names:
-:: 
+
+::
+
     In [7]: importables = []
     In [8]: autocompletes = pyplete.get_importables_rest_level(importables, "django")
     In [9]: autocompletes
@@ -111,7 +117,9 @@ Get the importable names:
     ('VERSION', 'constant')]
 
 Other example to the importable names:
+
 ::
+
     In [11]: importables = []
     In [12]: autocompletes = pyplete.get_importables_rest_level(importables, "django", ["contrib", "auth", "models"], into_module=True)
     Out[12]:
@@ -135,7 +143,9 @@ Other example to the importable names:
 
 
 Get names importables from a text:
+
 ::
+
     In [13]: importables = []
     In [14]: text = """class A(object):
     ....:     def __init__(self, x, y, z):
@@ -154,7 +164,9 @@ Get names importables from a text:
 
 
 Get names importables from a line:
+
 ::
+
     In [17]: importables = []
     In [18]: text = "import requests"
              line = "requests.models."
