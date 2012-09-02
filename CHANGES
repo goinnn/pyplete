@@ -1,6 +1,22 @@
 Releases
 ========
 
+0.0.2 (2012-09-02)
+------------------
+
+ * Now get to analize the relative imports, something like this:
+
+::
+
+   from models import MyModel # from the same directory of the models.py
+
+And this:
+
+::
+
+   from .models import MyModel # from the same directory of the models.py
+
+
 0.0.1 (2012-07-09)
 ------------------
 

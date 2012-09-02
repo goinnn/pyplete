@@ -25,6 +25,17 @@ from pysmell.codefinder import CodeFinder, ModuleDict
 PYSMELL_PREFIX = '__package____module__.'
 
 
+class PyPleteModuleDict(ModuleDict):
+
+    def addPointer(self, name, pointer):
+        if not name == '%s*' % PYSMELL_PREFIX:
+            super(PyPleteModuleDict, self).addPointer(name, pointer)
+        else:
+            if not name in self['POINTERS']:
+                self['POINTERS'][name] = []
+            self['POINTERS'][name].append(pointer)
+
+
 class PyPlete(object):
 
     def __init__(self, func_info=None, pythonpath=None, separator='.', *args, **kwargs):
@@ -162,18 +173,7 @@ class PyPlete(object):
     def get_pysmell_code_walk_to_text(self, text):
         code = compiler.parse(text)
         codefinder = CodeFinder()
-
-        class MyModuleDict(ModuleDict):
-
-            def addPointer(self, name, pointer):
-                if not name == '%s*' % PYSMELL_PREFIX:
-                    super(MyModuleDict, self).addPointer(name, pointer)
-                else:
-                    if not name in self['POINTERS']:
-                        self['POINTERS'][name] = []
-                    self['POINTERS'][name].append(pointer)
-
-        codefinder.modules = MyModuleDict()
+        codefinder.modules = PyPleteModuleDict()
         return compiler.walk(code, codefinder)
 
     def get_pysmell_modules_to_text(self, text):
