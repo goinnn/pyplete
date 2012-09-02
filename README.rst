@@ -23,7 +23,7 @@ Installation
 ::
 
  easy_install pysmell==0.7.3
- easy_install pyplete==0.0.1
+ easy_install pyplete==0.0.2
  
 Next features
 =============
