@@ -20,7 +20,7 @@ import os
 import pkgutil
 import sys
 
-from pysmell.codefinder import CodeFinder
+from pysmell.codefinder import CodeFinder, ModuleDict
 
 PYSMELL_PREFIX = '__package____module__.'
 
@@ -38,8 +38,8 @@ class PyPlete(object):
         self.separator = separator
         self.get_importables_top_level([])
 
-    def func_info(self, *args):
-        return args
+    def func_info(self, **kwargs):
+        return kwargs
 
     def get_importables_top_level(self, list_autocomplete, use_cache=True):
         # http://code.google.com/p/djangode/source/browse/trunk/djangode/data/codemodel/codemodel.py#57
@@ -59,7 +59,7 @@ class PyPlete(object):
                     category = 'package'
                 if not name:
                     continue
-                importable = self.func_info(name, category)
+                importable = self.func_info(text=name, category=category)
                 if importable and not importable in self.importables_top_level:
                     self.importables_top_level.append(importable)
                     self.importables_path[name] = [filename]
@@ -73,11 +73,11 @@ class PyPlete(object):
         subimportables = subimportables or []
         subimportables = [subimportable for subimportable in subimportables if subimportable]
         if subimportables:
-            subimportables = os.sep.join(subimportables)
-            imp_path = "%s%s%s" % (imp_path, os.sep, subimportables)
-        for loader, imp_name, is_pkg in pkgutil.walk_packages([imp_path]):
+            subimportables_path = os.sep.join(subimportables)
+            imp_path = "%s%s%s" % (imp_path, os.sep, subimportables_path)
+        for loader, name, is_pkg in pkgutil.walk_packages([imp_path]):
             category = is_pkg and 'package' or 'module'
-            importable = self.func_info(imp_name, category)
+            importable = self.func_info(text=name, category=category)
             list_autocomplete.append(importable)
         if into_module:
             into_dir = os.sep.join(imp_path.split(os.sep)[:-1])
@@ -86,12 +86,11 @@ class PyPlete(object):
             imp = importer.find_module(into_module)
             source = imp and imp.get_source()
             if source:
-                self.get_importables_from_text(list_autocomplete, source)
+                self.get_importables_from_text(list_autocomplete, source, path=['django', 'forms'])
         return list_autocomplete and bool(len(list_autocomplete))
 
-    def get_importables_from_text(self, list_autocomplete, text):
+    def get_importables_from_text(self, list_autocomplete, text, path=None):
         code_walk = self.get_pysmell_code_walk_to_text(text)
-        code_walk.isRelativeImport('widget')
         pysmell_modules = code_walk.modules
         treatment_dict = {'CONSTANTS': self.treatment_pysmell_const,
                           'FUNCTIONS': self.treatment_pysmell_func,
@@ -102,13 +101,31 @@ class PyPlete(object):
             if isinstance(pysmell_items, dict):
                 pysmell_items = pysmell_items.items()
             for pysmell_item in pysmell_items:
-                item = func(pysmell_item, pysmell_modules)
+                item = func(pysmell_item, pysmell_modules, path)
                 if item:
                     if isinstance(item, list):
                         list_autocomplete.extend(item)
                     elif not item in list_autocomplete:
                         list_autocomplete.append(item)
+        list_autocomplete = self._reduce_pointer(list_autocomplete)
         return len(list_autocomplete) > 0
+
+    def _reduce_pointer(self, list_autocomplete):
+        list_autocomplete.sort(cmp=lambda x, y: cmp(x['category'], y['category']))
+        list_autocomplete_text = [x['text'] for x in list_autocomplete]
+        i = len(list_autocomplete) - 1
+        while i >= 0:
+            item = list_autocomplete[i]
+            index = list_autocomplete.index(item)
+            if i != index:
+                del list_autocomplete[i]
+            elif item['category'] == 'pointer':
+                index_text = list_autocomplete_text.index(item['text'])
+                if i != index_text:
+                    del list_autocomplete[i]
+            i = i - 1
+        print list_autocomplete
+        return list_autocomplete
 
     def get_importables_from_line(self, list_autocomplete, text, code_line, text_info=True):
         pysmell_modules = self.get_pysmell_modules_to_text(text)
@@ -146,6 +163,18 @@ class PyPlete(object):
     def get_pysmell_code_walk_to_text(self, text):
         code = compiler.parse(text)
         codefinder = CodeFinder()
+
+        class MyModuleDict(ModuleDict):
+
+            def addPointer(self, name, pointer):
+                if not name == '%s*' % PYSMELL_PREFIX:
+                    super(MyModuleDict, self).addPointer(name, pointer)
+                else:
+                    if not name in self['POINTERS']:
+                        self['POINTERS'][name] = []
+                    self['POINTERS'][name].append(pointer)
+
+        codefinder.modules = MyModuleDict()
         return compiler.walk(code, codefinder)
 
     def get_pysmell_modules_to_text(self, text):
@@ -170,48 +199,62 @@ class PyPlete(object):
             return self.get_imp_loader_from_path(imp_name, subimportables[:-1], subimportables_undone)
         return (None, subimportables_undone)
 
-    def treatment_pysmell_const(self, constant, modules=None):
+    def treatment_pysmell_const(self, constant, modules=None, path=None):
         constant = constant.replace(PYSMELL_PREFIX, '')
-        return self.func_info(constant, 'constant')
+        return self.func_info(text=constant, category='constant')
 
-    def treatment_pysmell_func(self, func, modules=None):
+    def treatment_pysmell_func(self, func, modules=None, path=None):
         func_name, args, description = func
         func_name = func_name.replace(PYSMELL_PREFIX, '')
         args = ', '.join(args)
         args = ' (%s)' % args
-        return self.func_info(func_name,
-                              'function', args, description)
+        return self.func_info(text=func_name,
+                              category='function',
+                              args=args,
+                              description=description)
 
-    def treatment_pysmell_into_func(self, func):
-        return self.treatment_pysmell_func(func)
+    def treatment_pysmell_into_func(self, func, path=None):
+        return self.treatment_pysmell_func(func, path=path)
 
-    def treatment_pysmell_constructor(self, cls_name, args_constructor, description=None):
+    def treatment_pysmell_constructor(self, cls_name, args_constructor, description=None, path=None):
         args_constructor = ', '.join(args_constructor)
         args_constructor = ' (%s)' % args_constructor
-        return self.func_info(cls_name,
-                             'class', args_constructor,
-                             description)
+        return self.func_info(text=cls_name,
+                             category='class',
+                             args=args_constructor,
+                             description=description)
 
-    def treatment_pysmell_cls(self, cls, modules):
+    def treatment_pysmell_cls(self, cls, modules, path=None):
         cls_name, info = cls
         cls_name = cls_name.replace(PYSMELL_PREFIX, '')
         args_constructor = self.get_pysmell_constructor(info, modules)
-        return self.treatment_pysmell_constructor(cls_name, args_constructor, info.get('docstring', None))
+        return self.treatment_pysmell_constructor(cls_name, args_constructor, info.get('docstring', None), path)
 
-    def treatment_pysmell_pointer(self, pointer, modules=None):
+    def treatment_pysmell_pointer(self, pointer, modules=None, path=None):
         pointer_name, pointer_path = pointer
-        pointer_name = pointer_name.replace(PYSMELL_PREFIX, '')
-        if not pointer_path.startswith('__'):
-            if pointer_name == '*':
-                pointer_path_split = pointer_path.split('.')
-                if pointer_path_split:
-                    list_autocomplete = []
-                    imp_name = pointer_path_split[0]
-                    subimportables = pointer_path_split[1:-1]
-                    self.get_importables_rest_level(list_autocomplete, imp_name, subimportables, True)
-                    return list_autocomplete
-            else:
-                return self.func_info(pointer_name, 'package')
+        if isinstance(pointer_path, list):  # when there is __package____module__.*
+            list_autocomplete = []
+            for pointer_path_item in pointer_path:
+                list_autocomplete_item = self.treatment_pysmell_pointer((pointer_name, pointer_path_item),
+                                                                         modules=modules, path=path)
+                list_autocomplete.extend(list_autocomplete_item)
+            return list_autocomplete
+        else:
+            pointer_name = pointer_name.replace(PYSMELL_PREFIX, '')
+            if not pointer_path.startswith('__'):
+                if pointer_name == '*':
+                    pointer_path_split = pointer_path.split('.')
+                    if pointer_path_split:
+                        list_autocomplete = []
+                        imp_name = pointer_path_split[0]
+                        subimportables = pointer_path_split[1:-1]
+                        is_auto = self.get_importables_rest_level(list_autocomplete, imp_name, subimportables, True)
+                        if not is_auto and path:
+                            subimportables = path[1:] + [imp_name] + subimportables
+                            self.get_importables_rest_level(list_autocomplete, path[0], subimportables, True)
+                        return list_autocomplete
+                else:
+                    return self.func_info(text=pointer_name, category='pointer')
 
     def treatment_pysmell_into_cls(self, cls, modules, list_autocomplete, inherited_methods=None):
         inherited_methods = inherited_methods or []
