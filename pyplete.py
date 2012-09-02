@@ -124,7 +124,6 @@ class PyPlete(object):
                 if i != index_text:
                     del list_autocomplete[i]
             i = i - 1
-        print list_autocomplete
         return list_autocomplete
 
     def get_importables_from_line(self, list_autocomplete, text, code_line, text_info=True):
