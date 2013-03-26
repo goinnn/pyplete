@@ -159,15 +159,16 @@ class PyPlete(object):
             submodules = module_path.split(self.separator)[1:]
             submodules.extend(code_line_split[1:])
             imp_loader, submodules_undone = self.get_imp_loader_from_path(module, submodules)
-            if not submodules_undone:
-                self.get_importables_rest_level(list_autocomplete, module, submodules, True)
-            submodules_undone.reverse()
-            line = self.separator.join(submodules_undone)
-            text = imp_loader.get_source()
-            if line:
-                return self.get_importables_from_line(list_autocomplete, text, line)
-            if text_info:
-                return self.get_importables_from_text(list_autocomplete, text)
+            if imp_loader:
+                if not submodules_undone:
+                    self.get_importables_rest_level(list_autocomplete, module, submodules, True)
+                submodules_undone.reverse()
+                line = self.separator.join(submodules_undone)
+                text = imp_loader.get_source()
+                if line:
+                    return self.get_importables_from_line(list_autocomplete, text, line)
+                if text_info:
+                    return self.get_importables_from_text(list_autocomplete, text)
         return False
 
     def get_pysmell_code_walk_to_text(self, text):

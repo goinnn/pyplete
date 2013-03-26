@@ -24,7 +24,7 @@ def read(*rnames):
 
 setup(
     name='pyplete',
-    version='0.0.2',
+    version='0.0.3',
     description="PYPLETE (PYthon autocomPLETE) is a interface to autocomplete in python",
     long_description=(read('README.rst') + '\n\n' + read('CHANGES')),
     keywords='pyplete, python,autocomplete,python autocomplete,python analizer',
