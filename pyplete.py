@@ -18,11 +18,13 @@ import compiler
 import glob
 import os
 import pkgutil
+import re
 import sys
 
 from pysmell.codefinder import CodeFinder, ModuleDict
 
 PYSMELL_PREFIX = '__package____module__.'
+encoding_line = re.compile("#( )*-\*-( )*(encoding|coding):( )*(?P<encoding>[\w-]+)( )*-\*-")
 
 
 class PyPleteModuleDict(ModuleDict):
@@ -172,6 +174,14 @@ class PyPlete(object):
         return False
 
     def get_pysmell_code_walk_to_text(self, text):
+        first_line = text.split("\n")[0]
+        m = encoding_line.match(first_line)
+        if m:
+            encoding = m.groupdict().get('encoding', None)
+            if encoding:
+                if isinstance(text, str):
+                    text = text.decode(encoding)
+                text = text.encode(encoding)
         code = compiler.parse(text)
         codefinder = CodeFinder()
         codefinder.modules = PyPleteModuleDict()
