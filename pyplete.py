@@ -182,6 +182,9 @@ class PyPlete(object):
                 if isinstance(text, str):
                     text = text.decode(encoding)
                 text = text.encode(encoding)
+        else:
+            if isinstance(text, unicode):
+                text = text.encode('utf-8')
         code = compiler.parse(text)
         codefinder = CodeFinder()
         codefinder.modules = PyPleteModuleDict()

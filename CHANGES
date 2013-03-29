@@ -1,6 +1,13 @@
 Releases
 ========
 
+0.0.5 (2013-03-29)
+------------------
+
+ * Finally fix a little error in get_pysmell_code_walk_to_text (only if the text was unicode characters)
+
+
+
 0.0.4 (2013-03-28)
 ------------------
 
